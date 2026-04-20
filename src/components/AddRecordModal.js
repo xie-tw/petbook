@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard,
+  ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Colors, Fonts, Spacing, BorderRadius, Shadow } from '../utils/theme';
 import { RECORD_TYPES } from '../utils/helpers';
+import DatePicker from './DatePicker';
+import VoiceInput from './VoiceInput';
 
 const TYPE_OPTIONS = Object.entries(RECORD_TYPES).map(([value, cfg]) => ({ value, ...cfg }));
 
@@ -44,7 +46,7 @@ export default function AddRecordModal({ visible, onClose, onAdd, petName }) {
 
   const validate = () => {
     const e = {};
-    if (!date.trim()) e.date = '请输入日期';
+    if (!date.trim()) e.date = '请选择日期';
     else if (!isDateValid(date)) e.date = '格式：YYYY-MM-DD';
     if (nextReminderDate && !isDateValid(nextReminderDate)) e.nextReminderDate = '格式：YYYY-MM-DD';
     if (type === 'vaccine' && !vaccineName.trim()) e.vaccineName = '请输入疫苗名称';
@@ -78,162 +80,170 @@ export default function AddRecordModal({ visible, onClose, onAdd, petName }) {
 
   const showReminder = type === 'vaccine' || type === 'deworm';
 
+  // 语音识别结果 → 填入当前激活字段
+  const handleVoiceResult = (text) => {
+    if (type === 'vaccine') setVaccineName((v) => (v ? v + text : text));
+    else if (type === 'deworm') setDewormType((v) => (v ? v + text : text));
+    else if (type === 'visit') setVisitReason((v) => (v ? v + text : text));
+    else if (type === 'daily') setDailyText((v) => (v ? v + text : text));
+    else if (type === 'weight') setWeight(text.replace(/[^0-9.]/g, ''));
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ width: '100%' }}>
-            <View style={styles.sheet}>
-              <View style={styles.header}>
-                <Text style={styles.title}>添加记录 {petName ? `· ${petName}` : ''}</Text>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ width: '100%' }}>
+          <View style={styles.sheet}>
+            <View style={styles.header}>
+              <Text style={styles.title}>添加记录 {petName ? `· ${petName}` : ''}</Text>
+              <View style={styles.headerRight}>
+                <VoiceInput onResult={handleVoiceResult} style={{ marginRight: Spacing.sm }} />
                 <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
                   <Text style={styles.closeText}>✕</Text>
                 </TouchableOpacity>
               </View>
-
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                {/* Type selector */}
-                <Text style={styles.label}>记录类型</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.sm }}>
-                  {TYPE_OPTIONS.map((t) => (
-                    <TouchableOpacity
-                      key={t.value}
-                      style={[styles.typeBtn, type === t.value && { backgroundColor: t.color, borderColor: t.color }]}
-                      onPress={() => setType(t.value)}
-                    >
-                      <Text style={styles.typeEmoji}>{t.emoji}</Text>
-                      <Text style={[styles.typeLabel, type === t.value && styles.typeLabelActive]}>{t.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-
-                {/* Date */}
-                <Text style={styles.label}>日期 <Text style={styles.required}>*</Text></Text>
-                <View style={styles.dateRow}>
-                  <TextInput
-                    style={[styles.input, { flex: 1 }, errors.date && styles.inputError]}
-                    value={date}
-                    onChangeText={setDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={Colors.textMuted}
-                    keyboardType="numbers-and-punctuation"
-                    maxLength={10}
-                  />
-                  <TouchableOpacity style={styles.todayBtn} onPress={() => setDate(todayStr())}>
-                    <Text style={styles.todayText}>今天</Text>
-                  </TouchableOpacity>
-                </View>
-                {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
-
-                {/* Type-specific fields */}
-                {type === 'vaccine' && (
-                  <>
-                    <Text style={styles.label}>疫苗名称 <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={[styles.input, errors.vaccineName && styles.inputError]}
-                      value={vaccineName}
-                      onChangeText={setVaccineName}
-                      placeholder="例如：猫三联、狂犬疫苗"
-                      placeholderTextColor={Colors.textMuted}
-                    />
-                    {errors.vaccineName && <Text style={styles.errorText}>{errors.vaccineName}</Text>}
-                  </>
-                )}
-
-                {type === 'deworm' && (
-                  <>
-                    <Text style={styles.label}>驱虫类型 <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={[styles.input, errors.dewormType && styles.inputError]}
-                      value={dewormType}
-                      onChangeText={setDewormType}
-                      placeholder="例如：体外驱虫、体内驱虫"
-                      placeholderTextColor={Colors.textMuted}
-                    />
-                    {errors.dewormType && <Text style={styles.errorText}>{errors.dewormType}</Text>}
-                  </>
-                )}
-
-                {type === 'weight' && (
-                  <>
-                    <Text style={styles.label}>体重 (kg) <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={[styles.input, errors.weight && styles.inputError]}
-                      value={weight}
-                      onChangeText={setWeight}
-                      placeholder="例如：4.5"
-                      placeholderTextColor={Colors.textMuted}
-                      keyboardType="decimal-pad"
-                    />
-                    {errors.weight && <Text style={styles.errorText}>{errors.weight}</Text>}
-                  </>
-                )}
-
-                {type === 'visit' && (
-                  <>
-                    <Text style={styles.label}>就诊原因 <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={[styles.input, errors.visitReason && styles.inputError]}
-                      value={visitReason}
-                      onChangeText={setVisitReason}
-                      placeholder="例如：年度体检、感冒发烧"
-                      placeholderTextColor={Colors.textMuted}
-                    />
-                    {errors.visitReason && <Text style={styles.errorText}>{errors.visitReason}</Text>}
-                    <Text style={styles.label}>备注</Text>
-                    <TextInput
-                      style={[styles.input, styles.multilineInput]}
-                      value={visitNote}
-                      onChangeText={setVisitNote}
-                      placeholder="医生建议、用药情况等（可选）"
-                      placeholderTextColor={Colors.textMuted}
-                      multiline
-                      numberOfLines={3}
-                    />
-                  </>
-                )}
-
-                {type === 'daily' && (
-                  <>
-                    <Text style={styles.label}>内容 <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={[styles.input, styles.multilineInput, errors.dailyText && styles.inputError]}
-                      value={dailyText}
-                      onChangeText={setDailyText}
-                      placeholder="记录今天发生的事情～"
-                      placeholderTextColor={Colors.textMuted}
-                      multiline
-                      numberOfLines={4}
-                    />
-                    {errors.dailyText && <Text style={styles.errorText}>{errors.dailyText}</Text>}
-                  </>
-                )}
-
-                {/* Reminder date (vaccine / deworm only) */}
-                {showReminder && (
-                  <>
-                    <Text style={styles.label}>下次提醒日期</Text>
-                    <TextInput
-                      style={[styles.input, errors.nextReminderDate && styles.inputError]}
-                      value={nextReminderDate}
-                      onChangeText={setNextReminderDate}
-                      placeholder="YYYY-MM-DD（将设置推送提醒）"
-                      placeholderTextColor={Colors.textMuted}
-                      keyboardType="numbers-and-punctuation"
-                      maxLength={10}
-                    />
-                    {errors.nextReminderDate && <Text style={styles.errorText}>{errors.nextReminderDate}</Text>}
-                    <Text style={styles.hint}>🔔 设置后，届时会收到可爱提醒哦！</Text>
-                  </>
-                )}
-
-                <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-                  <Text style={styles.submitText}>保存记录 {RECORD_TYPES[type]?.emoji}</Text>
-                </TouchableOpacity>
-                <View style={{ height: 24 }} />
-              </ScrollView>
             </View>
-          </KeyboardAvoidingView>
-        </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Type selector */}
+              <Text style={styles.label}>记录类型</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.sm }}>
+                {TYPE_OPTIONS.map((t) => (
+                  <TouchableOpacity
+                    key={t.value}
+                    style={[styles.typeBtn, type === t.value && { backgroundColor: t.color, borderColor: t.color }]}
+                    onPress={() => setType(t.value)}
+                  >
+                    <Text style={styles.typeEmoji}>{t.emoji}</Text>
+                    <Text style={[styles.typeLabel, type === t.value && styles.typeLabelActive]}>{t.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Date */}
+              <Text style={styles.label}>日期 <Text style={styles.required}>*</Text></Text>
+              <View style={styles.dateRow}>
+                <View style={{ flex: 1 }}>
+                  <DatePicker
+                    value={date}
+                    onChange={setDate}
+                    placeholder="选择日期"
+                    hasError={!!errors.date}
+                  />
+                </View>
+                <TouchableOpacity style={styles.todayBtn} onPress={() => setDate(todayStr())}>
+                  <Text style={styles.todayText}>今天</Text>
+                </TouchableOpacity>
+              </View>
+              {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
+
+              {/* Type-specific fields */}
+              {type === 'vaccine' && (
+                <>
+                  <Text style={styles.label}>疫苗名称 <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={[styles.input, errors.vaccineName && styles.inputError]}
+                    value={vaccineName}
+                    onChangeText={setVaccineName}
+                    placeholder="例如：猫三联、狂犬疫苗"
+                    placeholderTextColor={Colors.textMuted}
+                  />
+                  {errors.vaccineName && <Text style={styles.errorText}>{errors.vaccineName}</Text>}
+                </>
+              )}
+
+              {type === 'deworm' && (
+                <>
+                  <Text style={styles.label}>驱虫类型 <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={[styles.input, errors.dewormType && styles.inputError]}
+                    value={dewormType}
+                    onChangeText={setDewormType}
+                    placeholder="例如：体外驱虫、体内驱虫"
+                    placeholderTextColor={Colors.textMuted}
+                  />
+                  {errors.dewormType && <Text style={styles.errorText}>{errors.dewormType}</Text>}
+                </>
+              )}
+
+              {type === 'weight' && (
+                <>
+                  <Text style={styles.label}>体重 (kg) <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={[styles.input, errors.weight && styles.inputError]}
+                    value={weight}
+                    onChangeText={setWeight}
+                    placeholder="例如：4.5"
+                    placeholderTextColor={Colors.textMuted}
+                    keyboardType="decimal-pad"
+                  />
+                  {errors.weight && <Text style={styles.errorText}>{errors.weight}</Text>}
+                </>
+              )}
+
+              {type === 'visit' && (
+                <>
+                  <Text style={styles.label}>就诊原因 <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={[styles.input, errors.visitReason && styles.inputError]}
+                    value={visitReason}
+                    onChangeText={setVisitReason}
+                    placeholder="例如：年度体检、感冒发烧"
+                    placeholderTextColor={Colors.textMuted}
+                  />
+                  {errors.visitReason && <Text style={styles.errorText}>{errors.visitReason}</Text>}
+                  <Text style={styles.label}>备注</Text>
+                  <TextInput
+                    style={[styles.input, styles.multilineInput]}
+                    value={visitNote}
+                    onChangeText={setVisitNote}
+                    placeholder="医生建议、用药情况等（可选）"
+                    placeholderTextColor={Colors.textMuted}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </>
+              )}
+
+              {type === 'daily' && (
+                <>
+                  <Text style={styles.label}>内容 <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={[styles.input, styles.multilineInput, errors.dailyText && styles.inputError]}
+                    value={dailyText}
+                    onChangeText={setDailyText}
+                    placeholder="记录今天发生的事情～"
+                    placeholderTextColor={Colors.textMuted}
+                    multiline
+                    numberOfLines={4}
+                  />
+                  {errors.dailyText && <Text style={styles.errorText}>{errors.dailyText}</Text>}
+                </>
+              )}
+
+              {/* Reminder date */}
+              {showReminder && (
+                <>
+                  <Text style={styles.label}>下次提醒日期</Text>
+                  <DatePicker
+                    value={nextReminderDate}
+                    onChange={setNextReminderDate}
+                    placeholder="选择提醒日期（可选）"
+                    hasError={!!errors.nextReminderDate}
+                  />
+                  {errors.nextReminderDate && <Text style={styles.errorText}>{errors.nextReminderDate}</Text>}
+                  <Text style={styles.hint}>🔔 设置后，届时会收到可爱提醒哦！</Text>
+                </>
+              )}
+
+              <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+                <Text style={styles.submitText}>保存记录 {RECORD_TYPES[type]?.emoji}</Text>
+              </TouchableOpacity>
+              <View style={{ height: 24 }} />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -251,6 +261,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: Spacing.md,
+  },
+  headerRight: {
+    flexDirection: 'row', alignItems: 'center',
   },
   title: { fontSize: 18, color: Colors.text, ...Fonts.bold },
   closeBtn: {
@@ -272,10 +285,10 @@ const styles = StyleSheet.create({
   typeEmoji: { fontSize: 16 },
   typeLabel: { fontSize: 13, color: Colors.textLight, ...Fonts.medium },
   typeLabelActive: { color: Colors.text, ...Fonts.semiBold },
-  dateRow: { flexDirection: 'row', gap: Spacing.sm },
+  dateRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
   todayBtn: {
     backgroundColor: Colors.primary, borderRadius: BorderRadius.md,
-    paddingHorizontal: 14, justifyContent: 'center',
+    paddingHorizontal: 14, paddingVertical: 12, justifyContent: 'center',
   },
   todayText: { fontSize: 13, color: Colors.white, ...Fonts.semiBold },
   input: {

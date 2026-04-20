@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard,
+  ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Colors, Fonts, Spacing, BorderRadius, Shadow } from '../utils/theme';
 import { PET_SPECIES, PET_EMOJIS, PET_GENDERS } from '../utils/helpers';
+import DatePicker from './DatePicker';
 
 export default function AddPetModal({ visible, onClose, onAdd }) {
   const [name, setName] = useState('');
@@ -122,14 +123,11 @@ export default function AddPetModal({ visible, onClose, onAdd }) {
 
                 {/* Birthday */}
                 <Text style={styles.label}>生日</Text>
-                <TextInput
-                  style={[styles.input, errors.birthday && styles.inputError]}
+                <DatePicker
                   value={birthday}
-                  onChangeText={setBirthday}
-                  placeholder="YYYY-MM-DD，例如 2022-03-15"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={10}
+                  onChange={setBirthday}
+                  placeholder="选择生日（可选）"
+                  hasError={!!errors.birthday}
                 />
                 {errors.birthday && <Text style={styles.errorText}>{errors.birthday}</Text>}
 
