@@ -80,7 +80,6 @@ export default function AddRecordModal({ visible, onClose, onAdd, petName }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.overlay}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ width: '100%' }}>
             <View style={styles.sheet}>
@@ -235,7 +234,6 @@ export default function AddRecordModal({ visible, onClose, onAdd, petName }) {
             </View>
           </KeyboardAvoidingView>
         </View>
-      </TouchableWithoutFeedback>
     </Modal>
   );
 }

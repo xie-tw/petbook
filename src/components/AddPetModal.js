@@ -54,7 +54,6 @@ export default function AddPetModal({ visible, onClose, onAdd }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.overlay}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
             <View style={styles.sheet}>
@@ -160,7 +159,6 @@ export default function AddPetModal({ visible, onClose, onAdd }) {
             </View>
           </KeyboardAvoidingView>
         </View>
-      </TouchableWithoutFeedback>
     </Modal>
   );
 }
